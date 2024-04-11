@@ -8,7 +8,8 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-app = Flask(__name__)
+#app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 
 # Load the trained sentiment analysis model
 model = joblib.load("sentiment_analysis_model.pkl")
@@ -65,14 +66,21 @@ def get_sentiment_label(text):
 
 @app.route('/')
 def home():
-    return render_template('Surazz2022/MLproj/SentimentAnalysisApp/template/index.html')
+    return render_template('C:\Users\hhhh\MLproj\MLproj\index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
     text = request.form['text']
     cleaned_text = clean_text(text)
     sentiment_label = get_sentiment_label(cleaned_text)
-    return render_template('result.html', text=text, sentiment=sentiment_label)
+    return render_template('C:\Users\hhhh\MLproj\MLproj\index.html', text=text, sentiment=sentiment_label)
+
+def wsgi_app(self, environ, start_response):
+    # Perform any additional setup or processing here
+    return self(environ, start_response)
+
+app.wsgi_app = wsgi_app
+
 
 if __name__ == '__main__':
     app.run(debug=True)
