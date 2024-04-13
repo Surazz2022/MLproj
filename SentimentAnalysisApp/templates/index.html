@@ -39,11 +39,11 @@
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
 
-        {% if sentiment %}
+        {% if sentiment_label %}
         <div class="result-box">
             <h2 class="mt-4">Result:</h2>
-            <p><strong>Input Text:</strong> {{ text }}</p>
-            <p><strong>Sentiment:</strong> {{ sentiment }}</p>
+            <p><strong>Input Text:</strong> {{ caption }}</p>
+            <p><strong>Sentiment:</strong> {{ sentiment_label }}</p>
         </div>
         {% endif %}
     </div>
