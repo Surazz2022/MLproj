@@ -8,7 +8,7 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 app = Flask(__name__, template_folder='templates')
 
-# Load the trained sentiment analysis model
+# Loading the trained sentiment analysis model
 model = joblib.load("sentiment_analysis_model.pkl")
 
 # Function to clean text
