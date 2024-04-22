@@ -1,26 +1,19 @@
-# Use the official Python image as the base image
-FROM python:latest
+# Use the official Python image with version 3.12 as a base
+FROM python:3.12-slim AS builder
 
-# Set the working directory inside the container
+# Install dependencies for building and testing
 WORKDIR /app
-
-# Copy the requirements.txt file into the container at /app
-COPY requirements.txt .
-
-# Update pip
-RUN pip install --no-cache-dir --upgrade pip
-
-# Install dependencies
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
-COPY . .
+# Start a new stage
+FROM python:3.12-slim
 
-# Expose the port the app runs on
-EXPOSE 8000
+# Set the working directory in the container
+WORKDIR /app
 
-# Define environment variable
-ENV NAME SentimentAnalysisApp
+# Copy the application code from the previous stage
+COPY --from=builder /app .
 
-# Command to run the FastAPI application
+# Specify the command to run your application
 CMD ["uvicorn", "Fapp:app", "--host", "0.0.0.0", "--port", "8000"]

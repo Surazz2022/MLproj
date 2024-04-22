@@ -1,11 +1,13 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  app:
-    build: 
+  fastapi-app:
+    build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - ./Fapp:/app
+    environment:
+      - PYTHONUNBUFFERED=1
