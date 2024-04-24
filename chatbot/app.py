@@ -1,27 +1,57 @@
+
+import pathlib
+import textwrap
+
+import google.generativeai as genai
+
+from IPython.display import display
+from IPython.display import Markdown
+from dpreprocess import dataset 
+
+def to_markdown(text):
+  text = text.replace('•', '  *')
+  return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
+
+
+# Define userdata dictionary with Google API key
+userdata = {
+    'google_api_key': 'AIzaSyCVn0U15A6VkcJRP725hM342gLiB00861o'  
+}
+
+# Or use `os.getenv('GOOGLE_API_KEY')` to fetch an environment variable.
+GOOGLE_API_KEY=userdata.get('google_api_key')
+
+genai.configure(api_key=GOOGLE_API_KEY)
+
+
+for m in genai.list_models():
+  if 'generateContent' in m.supported_generation_methods:
+    print(m.name)
+
+model = genai.GenerativeModel('gemini-pro')
+
+
+response = model.generate_content("What is the meaning of life?")
+
+
+to_markdown(response.text)
+
+response.prompt_feedback
+
 from flask import Flask, request, jsonify, render_template
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from dpreprocessor import dataset 
+
+
 
 app = Flask(__name__)
-
-# Load pre-trained GPT model and tokenizer
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-model = GPT2LMHeadModel.from_pretrained("gpt2")
-
-# Function to generate response using the pre-trained model
-def generate_response(user_input, max_length=50):
-    input_ids = tokenizer.encode(user_input, return_tensors="pt", max_length=max_length, truncation=True)
-    output = model.generate(input_ids, max_length=max_length, num_return_sequences=1, temperature=0.7, pad_token_id=tokenizer.eos_token_id)
-    response = tokenizer.decode(output[0], skip_special_tokens=True)
-    return response
 
 # Route to handle incoming messages from the user
 @app.route('/message', methods=['POST'])
 def handle_message():
     data = request.get_json()
     user_input = data['message']
-    response = generate_response(user_input)
-    return jsonify({'message': response})
+    # Generate response using the GenerativeModel
+    response = model.generate_content(user_input)
+    return jsonify({'message': response.text})
 
 # Route to render the chatbot interface
 @app.route('/')
