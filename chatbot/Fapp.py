@@ -1,128 +1,63 @@
-import pathlib
-import textwrap
+import torch
+from transformers import GeminiForQuestionAnswering, GeminiTokenizer
+import docx
+import pdfplumber
 
-import google.generativeai as genai
-from flask import Flask, request, jsonify, render_template
-from nltk.corpus import stopwords  # Import stopwords for preprocessing
-from nltk.tokenize import word_tokenize  # Import word_tokenize for tokenization
-
-from IPython.display import display
-from IPython.display import Markdown
-
-
-def to_markdown(text):
-    text = text.replace('•', '  *')
-    return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
-
-
-# Define userdata dictionary with Google API key
-userdata = {
-    'google_api_key': 'AIzaSyCVn0U15A6VkcJRP725hM342gLiB00861o'  # Replace with your actual key
-}
-
-# Configure GenerativeAI
-GOOGLE_API_KEY = userdata.get('google_api_key')
-genai.configure(api_key=GOOGLE_API_KEY)
-
-
-model = genai.GenerativeModel('gemini-pro')
-
-# Function to read a document from a file (replace with your document parsing logic if needed)
 def read_document(file_path):
-    with open(file_path, 'r') as f:
-        document_content = f.read()
-    return document_content
-
-
-# Function to retrieve documents based on type and location (replace with your implementation)
-def get_documents(document_type, location):
-    # Handle different document types (e.g., database query, filesystem access)
-    if document_type == 'file':
-        if pathlib.Path(location).is_file():
-            return [read_document(location)]  # Read a single document from the provided path
-        else:
-            raise ValueError(f"Invalid file path: {location}")
-    elif document_type == 'directory':
-        documents = []
-        for file in pathlib.Path(location).iterdir():
-            if file.is_file():
-                documents.append(read_document(str(file)))  # Convert Path object to string
-        return documents
+    """
+    Read a document from a file path and return the text content.
+    Supported file formats: .txt, .docx, .pdf
+    """
+    if file_path.endswith('.txt'):
+        with open(file_path, 'r') as f:
+            return f.read()
+    elif file_path.endswith('.docx'):
+        doc = docx.Document(file_path)
+        return '\n'.join([p.text for p in doc.paragraphs])
+    elif file_path.endswith('.pdf'):
+        with pdfplumber.open(file_path) as pdf:
+            text = ''
+            for page in pdf.pages:
+                text += page.extract_text()
+            return text
     else:
-        raise ValueError(f"Unsupported document type: {document_type}")
+        raise ValueError("Unsupported file format")
 
+def answer_user_query(document, user_query):
+    # Load the pre-trained Gemini model and tokenizer
+    model = GeminiForQuestionAnswering.from_pretrained('gemini-base')
+    tokenizer = GeminiTokenizer.from_pretrained('gemini-base')
 
-# Function to preprocess documents (replace with your actual preprocessing steps)
-def preprocess_documents(documents):
-    # Perform necessary cleaning and tokenization (using NLTK)
-    stop_words = stopwords.words('english')  # Download stopwords corpus if needed
-    preprocessed_documents = []
-    for doc in documents:
-        tokens = word_tokenize(doc.lower())  # Lowercase and tokenize
-        filtered_tokens = [token for token in tokens if token not in stop_words]  # Remove stop words
-        # Add further steps like stemming/lemmatization if needed
-        preprocessed_documents.append(filtered_tokens)
-    return preprocessed_documents
+    # Preprocess the document
+    input_ids = tokenizer.encode(document, return_tensors='pt')
+    attention_mask = tokenizer.encode(document, return_tensors='pt', max_length=512, truncation=True)
 
+    # Prepare the user query
+    query_input_ids = tokenizer.encode(user_query, return_tensors='pt')
+    query_attention_mask = tokenizer.encode(user_query, return_tensors='pt', max_length=512, truncation=True)
 
-# --- Document Embedding Section (Modified using TF-IDF) ---
+    # Use the Gemini model to answer the user query
+    outputs = model(input_ids, attention_mask=attention_mask, question_input_ids=query_input_ids, question_attention_mask=query_attention_mask)
+    answer_start_scores = outputs.start_scores
+    answer_end_scores = outputs.end_scores
 
-# Removed Gensim-based document embedding section (uncomment if you prefer TF-IDF)
+    # Get the predicted answer
+    answer_start = torch.argmax(answer_start_scores)
+    answer_end = torch.argmax(answer_end_scores) + answer_start
 
-# Function to generate TF-IDF vectors for documents (alternative to word embeddings)
-def generate_tf_idf_vectors(documents):
-    from sklearn.feature_extraction.text import TfidfVectorizer
-
-    vectorizer = TfidfVectorizer()
-    tf_idf_matrix = vectorizer.fit_transform(documents)
-    return tf_idf_matrix
-
-# Function to retrieve documents based on cosine similarity with TF-IDF
-def retrieve_documents_by_similarity(query, tf_idf_matrix, k=3):
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    query_vector = vectorizer.transform([query])
-    similarity_scores = cosine_similarity(query_vector, tf_idf_matrix).flatten()
-    top_documents = sorted(enumerate(similarity_scores), key=lambda item: item[1], reverse=True)[:k]
-    return top_documents
-
-# --- End of Document Embedding Section ---
-
-
-# Function to preprocess user query (customizable)
-def preprocess_query(query):
-    text = query.lower()  # Lowercase
-    text = text.strip()  # Remove leading/trailing whitespaces
-    # Add further steps like stop word removal, stemming/lemmatization
-    return text.split()
-
-
-def simulate_gemini_call(documents):
-    # Process documents using Gemini API (replace with your actual API call)
-    answer = "Answer retrieved from documents using Gemini"  # Placeholder for Gemini's response
+    # Extract the answer from the document
+    answer = document[answer_start:answer_end]
     return answer
 
+# Get the document file path
+document_file_path = input("Enter the document file path:C:/Users/hhhh/MLproj/MLproj/chatbot/updated CV.pdf ")
 
+# Read the document
+document = read_document(document_file_path)
 
+# Get the user query
+user_query = input("Enter your question: ")
 
-
-# Flask application
-app = Flask(__name__)
-
-# Route to handle incoming messages from the user
-@app.route('/message', methods=['POST'])
-def handle_message():
-    data = request.get_json()
-    user_input = data['message']
-    # Generate response using the GenerativeModel
-    response = model.generate_content(user_input)
-    return jsonify({'message': response.text})
-
-# Route to render the chatbot interface
-@app.route('/')
-def chat_interface():
-    return render_template('index.html')
-
-if __name__ == '__main__':
-    app.run(debug=True)
-    
+# Answer the user query
+answer = answer_user_query(document, user_query)
+print("Answer:", answer)
