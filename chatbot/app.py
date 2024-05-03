@@ -14,9 +14,7 @@ def to_markdown(text):
 
 
 # Define userdata dictionary with Google API key
-userdata = {
-    'google_api_key': 'AIzaSyCVn0U15A6VkcJRP725hM342gLiB00861o'  
-}
+
 
 # Or use `os.getenv('GOOGLE_API_KEY')` to fetch an environment variable.
 GOOGLE_API_KEY=userdata.get('google_api_key')
