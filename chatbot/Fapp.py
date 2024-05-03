@@ -11,7 +11,8 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from google.cloud import language
 from langchain_community.embeddings import HuggingFaceEmbeddings
-import service_account
+from google.oauth2 import service_account
+import csv
 
 app = Flask(__name__)
 
@@ -111,6 +112,27 @@ def ask():
     except Exception as e:
         app.logger.error(f"Error in /ask endpoint: {str(e)}")
         return jsonify({"error": "An error occurred while processing the request."}), 500
+
+@app.route("/callme", methods=["POST"])
+def callme():
+    try:
+        data = request.json
+        user_query = data["query"]
+        name = data.get("name", "")
+        phone_number = data.get("phone_number", "")
+        email = data.get("email", "")
+
+        if not (name and phone_number and email):
+            return jsonify({"error": "Please provide all required information."}), 400
+
+        # Store user information in a database or a file (e.g., a CSV file)
+        with open("user_info.csv", "a", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([name, phone_number, email])
+
+        return jsonify({"message": "Thank you for providing your information. We will call you soon."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

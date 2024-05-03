@@ -98,7 +98,7 @@
         .input-container > *:not(:last-child) {
           margin-bottom: 10px;
         }
-      </style>
+    </style>
 </head>
 <body>
     <div class="container">
@@ -109,6 +109,7 @@
             <button onclick="uploadDocument()" class="send-button">Upload Document</button>
             <input type="text" id="user-input" class="input-field" placeholder="Type your message...">
             <button onclick="sendMessage()" class="send-button">Send</button>
+            <button onclick="callMe()" class="send-button">Call Me</button>
         </div>
     </div>
 
@@ -137,7 +138,6 @@
             appendMessage("user", userInput);
             document.getElementById("user-input").value = "";
 
-            // Send user message to backend
             fetch('/ask', {
                 method: 'POST',
                 headers: {
@@ -154,6 +154,39 @@
                 appendMessage("bot", botResponse);
             })
             .catch(error => console.error('Error:', error));
+        }
+
+        function callMe() {
+            var userInput = document.getElementById("user-input").value;
+            appendMessage("user", userInput);
+            document.getElementById("user-input").value = "";
+
+            var name = prompt("Please enter your name:");
+            var phoneNumber = prompt("Please enter your phone number:");
+            var email = prompt("Please enter your email address:");
+
+            if (name && phoneNumber && email) {
+                fetch('/callme', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: userInput,
+                        name: name,
+                        phone_number: phoneNumber,
+                        email: email
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    var botResponse = data.message;
+                    appendMessage("bot", botResponse);
+                })
+                .catch(error => console.error('Error:', error));
+            } else {
+                alert("Please provide all required information.");
+            }
         }
 
         function appendMessage(sender, message) {
