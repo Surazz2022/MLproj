@@ -6,7 +6,7 @@ import google.generativeai as genai
 
 from IPython.display import display
 from IPython.display import Markdown
-from dpreprocess import dataset 
+
 
 def to_markdown(text):
   text = text.replace('•', '  *')

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Intelligent Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Intelligent Chatbot</h1>
+    <form action="/chat" method="post">
+        <input type="text" name="input" placeholder="Type your message...">
+        <button type="submit">Send</button>
+    </form>
+    <div id="chat-log"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

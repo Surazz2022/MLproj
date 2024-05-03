@@ -1,0 +1,10 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+#chat-log {
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
