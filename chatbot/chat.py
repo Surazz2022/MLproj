@@ -14,15 +14,25 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from google.oauth2 import service_account
 import csv
 from transformers import pipeline
-import google.generativeai as genai
-from transformers import pipeline, T5ForConditionalGeneration, T5Tokenizer
 import torch
 import faiss
-from rasa.nlu.extractors import EntityExtractor
-from rasa.nlu.components import IntentClassifier
+from transformers import T5ForConditionalGeneration, T5Tokenizer
+#from rasa.nlu.extractors import EntityExtractor
+from rasa.nlu.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
+from rasa.nlu.tokenizers.jieba_tokenizer import JiebaTokenizer
+from rasa.nlu.tokenizers.spacy_tokenizer import SpacyTokenizer
+from rasa.nlu.featurizers import SpacyFeaturizer
+from rasa.nlu.components import ResponseSelector
+from rasa.nlu.extractors.mitie_entity_extractor import MitieEntityExtractor
+from rasa.nlu.extractors.spacy_entity_extractor import SpacyEntityExtractor
+from rasa.nlu.extractors.crf_entity_extractor import CRFEntityExtractor
+from rasa.nlu.classifiers import IntentClassifier
 from rasa.nlu.training_data import TrainingData
 from rasa.nlu.model import Metadata
 from pymongo import MongoClient
+import google.generativeai as genai
+from packaging.version import Version as LegacyVersion
+
 
 app = Flask(__name__)
 
@@ -43,7 +53,7 @@ faiss_index = index
 docstore = []  # Initialize an empty document store
 index_to_docstore_id = {}  # Initialize an empty mapping from index IDs to document store IDs
 
-faiss_index = FAISS(index, docstore, index_to_docstore_id)
+faiss_index = FAISS(index, docstore)
 
 # Define a function to encode documents using Hugging Face embeddings
 def encode_document(document_text):
@@ -69,8 +79,14 @@ def generate_answer(input_text):
 
 # Define a function to extract entities from user input
 def extract_entities(text):
-    extractor = EntityExtractor()
-    entities = extractor.extract(text)
+    tokenizer = SpacyTokenizer(model="en_core_web_sm")
+    featurizer = SpacyFeaturizer(model="en_core_web_sm")
+    entities = []
+    tokens = tokenizer.tokenize(text)
+    for token in tokens:
+        entity = featurizer.extract_entities(token)
+        if entity:
+            entities.append(entity)
     return entities
 
 # Define a function to classify user intent
@@ -152,7 +168,22 @@ def ask():
         input_text = f"Query: {user_query}\nDocument: {top_document_text}"
         answer = generate_answer(input_text)
 
-        # Return the answer
+        # Extract entities from user input
+        entities = extract_entities(user_query)
+
+        # Classify user intent
+        intent = classify_intent(user_query)
+
+        # Store user conversation in the database
+        conversation = {
+            "user_query": user_query,
+            "document_filename": document_filename,
+            "entities": entities,
+            "intent": intent,
+            "answer": answer
+        }
+        collection.insert_one(conversation)
+
         return jsonify({"answer": answer})
 
     except Exception as e:
